@@ -1,12 +1,10 @@
 using UnityEngine;
 
-public class ParticleDisplay3D : MonoBehaviour
+public class AirParticleDisplay3D : MonoBehaviour
 {
-
     public Shader shader;
     public float scale;
     Mesh mesh;
-    public Color col;
     Material mat;
 
     ComputeBuffer argsBuffer;
@@ -18,11 +16,31 @@ public class ParticleDisplay3D : MonoBehaviour
     Texture2D gradientTexture;
     bool needsUpdate;
 
-    public float speedThreshold; // Added speedThreshold
-
-
     public int meshResolution;
     public int debug_MeshTriCount;
+
+    public Color tintColor;
+    public float softness;
+
+    // Reference to Simulation3D
+    public Simulation3D simulation;
+
+    void Start()
+    {
+        if (simulation == null)
+        {
+            Debug.LogError("Simulation reference is not assigned!");
+            return;
+        }
+
+        if (shader == null)
+        {
+            Debug.LogError("Shader is not assigned!");
+            return;
+        }
+
+        Init(simulation);
+    }
 
     public void Init(Simulation3D sim)
     {
@@ -38,6 +56,11 @@ public class ParticleDisplay3D : MonoBehaviour
 
     void LateUpdate()
     {
+        if (mat == null)
+        {
+            Debug.LogError("Material is not assigned! Did you call Init()?");
+            return;
+        }
 
         UpdateSettings();
         Graphics.DrawMeshInstancedIndirect(mesh, 0, mat, bounds, argsBuffer);
@@ -52,11 +75,10 @@ public class ParticleDisplay3D : MonoBehaviour
             mat.SetTexture("ColourMap", gradientTexture);
         }
         mat.SetFloat("scale", scale);
-        mat.SetColor("colour", col);
+        mat.SetColor("TintColor", tintColor);
+        mat.SetFloat("Softness", softness);
         mat.SetFloat("velocityMax", velocityDisplayMax);
 
-        mat.SetFloat("speedThreshold", speedThreshold); // Pass the speedThreshold to the shader
-        
         Vector3 s = transform.localScale;
         transform.localScale = Vector3.one;
         var localToWorld = transform.localToWorldMatrix;

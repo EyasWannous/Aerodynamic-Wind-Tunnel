@@ -1,5 +1,5 @@
-using UnityEngine;
 using Unity.Mathematics;
+using UnityEngine;
 
 public class Simulation3D : MonoBehaviour
 {
@@ -11,11 +11,7 @@ public class Simulation3D : MonoBehaviour
     public int iterationsPerFrame;
     public float gravity = -10;
 
-    // Wind Power
-    public float3 windDirection = new(1, 0, 0);
-    public float windStrength = 0.1f;
-
-    [Range(0, 1)] 
+    [Range(0, 1)]
     public float collisionDamping = 0.05f;
 
     public float smoothingRadius = 0.2f;
@@ -23,6 +19,14 @@ public class Simulation3D : MonoBehaviour
     public float pressureMultiplier;
     public float nearPressureMultiplier;
     public float viscosityStrength;
+
+    [Header("Wind")]
+    // Wind Power
+    public float3 windDirection = new(0, 0, 0);
+    public float windStrength = 0f;
+    // Wind Area Bounds
+    public float3 windAreaMin = new(0, 0, 0);
+    public float3 windAreaMax = new(0, 0, 0);
 
     [Header("References")]
     public ComputeShader compute;
@@ -153,14 +157,22 @@ public class Simulation3D : MonoBehaviour
     {
         Vector3 simBoundsSize = transform.localScale;
         Vector3 simBoundsCentre = transform.position;
+
+        // Wind
         Vector3 windDirectionVector = windDirection;
+        Vector3 windAreaMinVector = windAreaMin;
+        Vector3 windAreaMaxVector = windAreaMax;
 
         compute.SetFloat("deltaTime", deltaTime);
         compute.SetFloat("gravity", gravity);
-        
+
         // Add wind power to Compute Shader 
         compute.SetVector("windDirection", windDirectionVector);
         compute.SetFloat("windStrength", windStrength);
+
+        // Add wind Range to Compute Shader 
+        compute.SetVector("windAreaMin", windAreaMinVector);
+        compute.SetVector("windAreaMax", windAreaMaxVector);
 
         compute.SetFloat("collisionDamping", collisionDamping);
         compute.SetFloat("smoothingRadius", smoothingRadius);

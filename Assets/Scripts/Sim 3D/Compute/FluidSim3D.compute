@@ -9,7 +9,7 @@
 #include "./FluidMaths3D.hlsl"
 #include "./SpatialHash3D.hlsl"
 
-static const int NumThreads = 64;
+static const int NumThreads = 256;
 
 // Buffers
 RWStructuredBuffer<float3> Positions;
@@ -26,6 +26,14 @@ const float gravity;
 // Wind Power
 const float3 windDirection;
 const float windStrength;
+
+// Wind Area Bounds
+const float3 windAreaMin;
+const float3 windAreaMax; 
+
+// // Sphere
+// static const float3 sphereCenter = float3(0, 0, 0);
+// static const float sphereRadius = 0.5;
 
 
 const float deltaTime;
@@ -68,11 +76,25 @@ void ResolveCollisions(uint particleIndex)
 	const float3 edgeDst = halfSize - abs(posLocal);
 
 	// Resolve collisions
-	if (edgeDst.x <= 0)
-	{
-		posLocal.x = halfSize.x * sign(posLocal.x);
-		velocityLocal.x *= -1 * collisionDamping;
-	}
+	//if (edgeDst.x <= 0)
+	//{
+	//	posLocal.x = halfSize.x * sign(posLocal.x);
+	//	velocityLocal.x *= -1 * collisionDamping;
+	//}
+	
+	// Wrapping behavior on the x axis
+    if (posLocal.x > halfSize.x)
+    {
+        posLocal.x = -halfSize.x;
+		velocityLocal.x *= collisionDamping;
+    }
+    else if (posLocal.x < -halfSize.x)
+    {
+       posLocal.x = halfSize.x;
+		velocityLocal.x *= collisionDamping;
+    }
+	
+	
 	if (edgeDst.y <= 0)
 	{
 		posLocal.y = halfSize.y * sign(posLocal.y);
@@ -83,7 +105,35 @@ void ResolveCollisions(uint particleIndex)
 		posLocal.z = halfSize.z * sign(posLocal.z);
 		velocityLocal.z *= -1 * collisionDamping;
 	}
+	
+	//// Wrapping behavior on the z axis
+    //if (posLocal.z > halfSize.z)
+    //{
+    //    posLocal.z = -halfSize.z;
+	//	velocityLocal.z *= collisionDamping;
+    //}
+    //else if (posLocal.z < -halfSize.z)
+    //{
+    //   posLocal.z = halfSize.z;
+	//	velocityLocal.z *= collisionDamping;
+    //}
 
+
+	//// Resolve collisions with the sphere
+    //float3 sphereToParticle = posLocal - sphereCenter;
+    //float distanceToSphere = length(sphereToParticle);
+
+    //if (distanceToSphere < sphereRadius)
+    //{
+    //   float3 collisionNormal = normalize(sphereToParticle);
+    //    posLocal = sphereCenter + collisionNormal * sphereRadius;
+
+//        // Reflect velocity
+  //      float3 velocityNormal = dot(velocityLocal, collisionNormal) * collisionNormal;
+    //    float3 velocityTangent = velocityLocal - velocityNormal;
+     //   velocityLocal = velocityTangent - velocityNormal * collisionDamping;
+    //}
+	
 	// Transform resolved position/velocity back to world space
 	Positions[particleIndex] = mul(localToWorld, float4(posLocal, 1)).xyz;
 	Velocities[particleIndex] = mul(localToWorld, float4(velocityLocal, 0)).xyz;
@@ -96,13 +146,17 @@ void ExternalForces (uint3 id : SV_DispatchThreadID)
 	if (id.x >= numParticles) return;
 
 	// External forces (gravity)
-	Velocities[id.x] += float3(0, gravity, 0) * deltaTime;
-    
-	// External forces (FanPower)
-	// Velocities[id.x] += float3(10, 0, 0) * deltaTime;
+	Velocities[id.x] += float3(0, gravity, 0) * deltaTime * 0.00000000001; // mass 0.029
+
+    float3 posLocal = mul(worldToLocal, float4(Positions[id.x], 1)).xyz;
 	
 	// External forces (wind)
-    Velocities[id.x] += windDirection * windStrength * deltaTime;
+    if (posLocal.x >= windAreaMin.x && posLocal.x <= windAreaMax.x &&
+        posLocal.y >= windAreaMin.y && posLocal.y <= windAreaMax.y &&
+        posLocal.z >= windAreaMin.z && posLocal.z <= windAreaMax.z)
+    {
+		Velocities[id.x] += windDirection * windStrength * deltaTime;
+    }
 
 	// Predict
 	PredictedPositions[id.x] = Positions[id.x] + Velocities[id.x] * 1 / 120.0;
@@ -151,6 +205,7 @@ void CalculateDensities (uint3 id : SV_DispatchThreadID)
 			if (indexData[1] != hash) continue;
 
 			uint neighbourIndex = indexData[0];
+
 			float3 neighbourPos = PredictedPositions[neighbourIndex];
 			float3 offsetToNeighbour = neighbourPos - pos;
 			float sqrDstToNeighbour = dot(offsetToNeighbour, offsetToNeighbour);
@@ -237,7 +292,7 @@ void CalculatePressureForce (uint3 id : SV_DispatchThreadID)
 void CalculateViscosity (uint3 id : SV_DispatchThreadID)
 {
 	if (id.x >= numParticles) return;
-		
+
 	float3 pos = PredictedPositions[id.x];
 	int3 originCell = GetCell3D(pos, smoothingRadius);
 	float sqrRadius = smoothingRadius * smoothingRadius;
