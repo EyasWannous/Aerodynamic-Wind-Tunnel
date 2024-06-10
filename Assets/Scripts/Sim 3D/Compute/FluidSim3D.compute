@@ -22,11 +22,11 @@ RWStructuredBuffer<float2> Densities; // Density, Near Density
 RWStructuredBuffer<uint3> SpatialIndices; // used for spatial hashing
 RWStructuredBuffer<uint> SpatialOffsets; // used for spatial hashing
 
-//// Tested Object
-//RWStructuredBuffer<float3> Points;
-//RWStructuredBuffer<uint> Triangles;
-//RWStructuredBuffer<uint3> PointsIndices; // used for spatial hashing
-//RWStructuredBuffer<uint> PointsOffsets; // used for spatial hashing
+// Tested Object
+RWStructuredBuffer<float3> Points;
+RWStructuredBuffer<uint> Triangles;
+RWStructuredBuffer<uint3> PointsIndices; // used for spatial hashing
+RWStructuredBuffer<uint> PointsOffsets; // used for spatial hashing
 
 //struct MyDictionary
 //{
@@ -190,10 +190,10 @@ void ResolveCollisions(uint particleIndex)
 	
 //}
 
-void TrianglesFromPoint(uint pointPosition)
-{
+//void TrianglesFromPoint(uint pointPosition)
+//{
 	
-}
+//}
 
 [numthreads(NumThreads,1,1)]
 void ExternalForces (uint3 id : SV_DispatchThreadID)
@@ -400,19 +400,19 @@ void UpdatePositions(uint3 id : SV_DispatchThreadID)
 	ResolveCollisions(id.x);
 }
 
-//// Tested Object
-//[NumThreads(NumThreads, 1, 1)]
-//void UpdatePointsHash(uint3 id : SV_DispatchThreadID)
-//{
-//    if (id.x >= numPoints) return;
-//	
-//    // Reset offsets
-//    PointsOffsets[id.x] = numPoints;
-//	
-//	// Update index buffer
-//   uint index = id.x;
-//    int3 cell = GetCell3D(Points[index], smoothingRadius);
-//    uint hash = HashCell3D(cell);
-//    uint key = KeyFromHash(hash, numParticles);
-//    PointsIndices[id.x] = uint3(index, hash, key);
-//}
+// Tested Object
+[NumThreads(NumThreads, 1, 1)]
+void UpdatePointsHash(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= numPoints) return;
+	
+    // Reset offsets
+    PointsOffsets[id.x] = numPoints;
+	
+	// Update index buffer
+	uint index = id.x;
+    int3 cell = GetCell3D(Points[index], smoothingRadius);
+    uint hash = HashCell3D(cell);
+    uint key = KeyFromHash(hash, numParticles);
+    PointsIndices[id.x] = uint3(index, hash, key);
+}

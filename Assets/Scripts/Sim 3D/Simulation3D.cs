@@ -3,11 +3,11 @@ using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 
-//struct MyDictionary
-//{
-//    public float3 myPoint;
-//    //public float3[] myTriangles;
-//};
+struct MyDictionary
+{
+    public float3 myPoint;
+    //public float3[] myTriangles;
+};
 
 public class Simulation3D : MonoBehaviour
 {
@@ -42,7 +42,7 @@ public class Simulation3D : MonoBehaviour
     public ParticleDisplay3D display;
     public Transform floorDisplay;
     // OBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-    //public TestedObject testedObject;
+    public TestedObject testedObject;
 
     // Buffers
     public ComputeBuffer PositionBuffer { get; private set; }
@@ -52,12 +52,12 @@ public class Simulation3D : MonoBehaviour
     ComputeBuffer spatialIndices;
     ComputeBuffer spatialOffsets;
 
-    //// Tested Object Buffers
-    //public ComputeBuffer PointsBuffer { get; private set; }
-    //public ComputeBuffer TrianglesBuffer { get; private set; }
-    //ComputeBuffer pointsIndices;
-    //ComputeBuffer pointsOffsets;
-    ////Dictionary<int, float3[]> pointTriangles = new();
+    // Tested Object Buffers
+    public ComputeBuffer PointsBuffer { get; private set; }
+    public ComputeBuffer TrianglesBuffer { get; private set; }
+    ComputeBuffer pointsIndices;
+    ComputeBuffer pointsOffsets;
+    //Dictionary<int, float3[]> pointTriangles = new();
     //ComputeBuffer MapBuffer;
 
     // Kernel IDs
@@ -89,7 +89,7 @@ public class Simulation3D : MonoBehaviour
 
     void Start()
     {
-        //testedObject.InitializeMesh();
+        testedObject.InitializeMesh();
 
         Debug.Log("Controls: Space = Play/Pause, R = Reset");
         Debug.Log("Use transform tool in scene to scale/rotate simulation bounding box.");
@@ -108,22 +108,22 @@ public class Simulation3D : MonoBehaviour
         spatialIndices = ComputeHelper.CreateStructuredBuffer<uint3>(numParticles);
         spatialOffsets = ComputeHelper.CreateStructuredBuffer<uint>(numParticles);
 
-        //// Create Tested Object buffers
-        //int numPoints = testedObject.vertices.Length;
-        //int numTriangles = testedObject.triangles.Length;
-        ////int numPoints = 515;
-        ////int numTriangles = 2304;
-        //PointsBuffer = ComputeHelper.CreateStructuredBuffer<float3>(numPoints);
-        //TrianglesBuffer = ComputeHelper.CreateStructuredBuffer<uint>(numTriangles);
-        //pointsIndices = ComputeHelper.CreateStructuredBuffer<uint3>(numPoints);
-        //pointsOffsets = ComputeHelper.CreateStructuredBuffer<uint>(numPoints);
+        // Create Tested Object buffers
+        int numPoints = testedObject.vertices.Length;
+        int numTriangles = testedObject.triangles.Length;
+        //int numPoints = 515;
+        //int numTriangles = 2304;
+        PointsBuffer = ComputeHelper.CreateStructuredBuffer<float3>(numPoints);
+        TrianglesBuffer = ComputeHelper.CreateStructuredBuffer<uint>(numTriangles);
+        pointsIndices = ComputeHelper.CreateStructuredBuffer<uint3>(numPoints);
+        pointsOffsets = ComputeHelper.CreateStructuredBuffer<uint>(numPoints);
         //MapBuffer = ComputeHelper.CreateStructuredBuffer<MyDictionary>(numPoints);
 
         // Set buffer data
         SetInitialBufferData(spawnData);
 
-        //// Set Tested Object buffer data
-        //SetPointsTriangles(testedObject);
+        // Set Tested Object buffer data
+        SetPointsTriangles(testedObject);
 
         // Init compute
         ComputeHelper.SetBuffer(compute, PositionBuffer, "Positions", externalForcesKernel, updatePositionsKernel);
@@ -133,24 +133,24 @@ public class Simulation3D : MonoBehaviour
         ComputeHelper.SetBuffer(compute, DensityBuffer, "Densities", densityKernel, pressureKernel, viscosityKernel);
         ComputeHelper.SetBuffer(compute, VelocityBuffer, "Velocities", externalForcesKernel, pressureKernel, viscosityKernel, updatePositionsKernel);
 
-        //// Init Tested Object
-        //ComputeHelper.SetBuffer(compute, PointsBuffer, "Points", spatialHashKernel); // , updatePointsHashKernel
-        //ComputeHelper.SetBuffer(compute, TrianglesBuffer, "Triangles");
-        //ComputeHelper.SetBuffer(compute, pointsIndices, "PointsIndices", spatialHashKernel);
-        //ComputeHelper.SetBuffer(compute, pointsOffsets, "PointsOffsets", spatialHashKernel);
+        // Init Tested Object
+        ComputeHelper.SetBuffer(compute, PointsBuffer, "Points", spatialHashKernel); // , updatePointsHashKernel
+        ComputeHelper.SetBuffer(compute, TrianglesBuffer, "Triangles");
+        ComputeHelper.SetBuffer(compute, pointsIndices, "PointsIndices", spatialHashKernel);
+        ComputeHelper.SetBuffer(compute, pointsOffsets, "PointsOffsets", spatialHashKernel);
 
         //ComputeHelper.SetBuffer(compute, MapBuffer, "Map");
 
         compute.SetInt("numParticles", PositionBuffer.count);
 
-        //// Tested Object
-        //compute.SetInt("numPoints", PointsBuffer.count);
+        // Tested Object
+        compute.SetInt("numPoints", PointsBuffer.count);
 
         gpuSort = new();
         gpuSort.SetBuffers(spatialIndices, spatialOffsets);
 
-        //// Tessted Object 
-        //gpuSort.SetPointsBuffers(pointsIndices, pointsOffsets);
+        // Tessted Object 
+        gpuSort.SetPointsBuffers(pointsIndices, pointsOffsets);
 
         // Init display
         display.Init(this);
@@ -280,8 +280,7 @@ public class Simulation3D : MonoBehaviour
 
     void OnDestroy()
     {
-        ComputeHelper.Release(PositionBuffer, predictedPositionsBuffer, VelocityBuffer, DensityBuffer, spatialIndices, spatialOffsets);
-            //PointsBuffer, TrianglesBuffer, pointsIndices, pointsOffsets); // MapBuffer
+        ComputeHelper.Release(PositionBuffer, predictedPositionsBuffer, VelocityBuffer, DensityBuffer, spatialIndices, spatialOffsets, PointsBuffer, TrianglesBuffer, pointsIndices, pointsOffsets); // MapBuffer
     }
 
     void OnDrawGizmos()
@@ -295,63 +294,62 @@ public class Simulation3D : MonoBehaviour
 
     }
 
-    //// Set Tested Object buffers 
-    //void SetPointsTriangles(TestedObject testedObject)
-    //{
-    //    float3[] allPoints = new float3[testedObject.vertices.Length];
-    //    //System.Array.Copy(testedObject.vertices, allPoints, testedObject.vertices.Length);
-    //    for (int i = 0; i < testedObject.vertices.Length; i++)
-    //    {
-    //        allPoints[i].x = testedObject.vertices[i].x;
-    //        allPoints[i].y = testedObject.vertices[i].y;
-    //        allPoints[i].z = testedObject.vertices[i].z;
-    //    }
+    // Set Tested Object buffers 
+    void SetPointsTriangles(TestedObject testedObject)
+    {
+        float3[] allPoints = new float3[testedObject.vertices.Length];
+        //System.Array.Copy(testedObject.vertices, allPoints, testedObject.vertices.Length);
+        for (int i = 0; i < testedObject.vertices.Length; i++)
+        {
+            allPoints[i].x = testedObject.vertices[i].x;
+            allPoints[i].y = testedObject.vertices[i].y;
+            allPoints[i].z = testedObject.vertices[i].z;
+        }
 
 
-    //    int[] allTriagnles = new int[testedObject.triangles.Length];
-    //    System.Array.Copy(testedObject.triangles, allTriagnles, testedObject.triangles.Length);
+        int[] allTriagnles = new int[testedObject.triangles.Length];
+        System.Array.Copy(testedObject.triangles, allTriagnles, testedObject.triangles.Length);
 
-    //    MyDictionary[] myDictionary = new MyDictionary[allPoints.Length];
+        MyDictionary[] myDictionary = new MyDictionary[allPoints.Length];
 
-    //    for (int i = 0; i < allPoints.Length; i++)
-    //    {
-    //        int counter = 0;
-    //        float3[] myTriangles = new float3[allTriagnles.Length];
-    //        for (int j = 0; j < allTriagnles.Length; j++)
-    //        {
-    //            if (i == allTriagnles[j])
-    //            {
-    //                if (j % 3 == 0)
-    //                {
-    //                    myTriangles[counter++] = allPoints[allTriagnles[j]];
-    //                    myTriangles[counter++] = allPoints[allTriagnles[j + 1]];
-    //                    myTriangles[counter++] = allPoints[allTriagnles[j + 2]];
-    //                }
-    //                if (j % 3 == 1)
-    //                {
-    //                    myTriangles[counter++] = allPoints[allTriagnles[j - 1]];
-    //                    myTriangles[counter++] = allPoints[allTriagnles[j]];
-    //                    myTriangles[counter++] = allPoints[allTriagnles[j + 1]];
-    //                }
-    //                if (j % 3 == 2)
-    //                {
-    //                    myTriangles[counter++] = allPoints[allTriagnles[j - 2]];
-    //                    myTriangles[counter++] = allPoints[allTriagnles[j - 1]];
-    //                    myTriangles[counter++] = allPoints[allTriagnles[j]];
-    //                }
-    //            }
-    //        }
+        for (int i = 0; i < allPoints.Length; i++)
+        {
+            int counter = 0;
+            float3[] myTriangles = new float3[allTriagnles.Length];
+            for (int j = 0; j < allTriagnles.Length; j++)
+            {
+                if (i == allTriagnles[j])
+                {
+                    if (j % 3 == 0)
+                    {
+                        myTriangles[counter++] = allPoints[allTriagnles[j]];
+                        myTriangles[counter++] = allPoints[allTriagnles[j + 1]];
+                        myTriangles[counter++] = allPoints[allTriagnles[j + 2]];
+                    }
+                    if (j % 3 == 1)
+                    {
+                        myTriangles[counter++] = allPoints[allTriagnles[j - 1]];
+                        myTriangles[counter++] = allPoints[allTriagnles[j]];
+                        myTriangles[counter++] = allPoints[allTriagnles[j + 1]];
+                    }
+                    if (j % 3 == 2)
+                    {
+                        myTriangles[counter++] = allPoints[allTriagnles[j - 2]];
+                        myTriangles[counter++] = allPoints[allTriagnles[j - 1]];
+                        myTriangles[counter++] = allPoints[allTriagnles[j]];
+                    }
+                }
+            }
 
 
-    //        myDictionary[i].myPoint = allPoints[i];
-    //        //myDictionary[i].myTriangles = new float3[allTriagnles.Length];
-    //        //System.Array.Copy(myTriangles, myDictionary[i].myTriangles, myTriangles.Length);
-    //    }
+            myDictionary[i].myPoint = allPoints[i];
+            //myDictionary[i].myTriangles = new float3[allTriagnles.Length];
+            //System.Array.Copy(myTriangles, myDictionary[i].myTriangles, myTriangles.Length);
+        }
 
-    //    PointsBuffer.SetData(allPoints);
-    //    TrianglesBuffer.SetData(allTriagnles);
+        PointsBuffer.SetData(allPoints);
+        TrianglesBuffer.SetData(allTriagnles);
 
-    //    MapBuffer.SetData(myDictionary);
-
-    //}
+        //MapBuffer.SetData(myDictionary);
+    }
 }
