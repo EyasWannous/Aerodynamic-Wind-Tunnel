@@ -5,7 +5,7 @@ using UnityEngine;
 
 public static class CollisionDetection
 {
-    public static void IsCollided(float3 V0, float3 V1, float3 V2, float3 sphereCenter, float sphereRadius)
+    public static bool IsCollided(float3 v0, float3 v1, float3 v2, float3 sphereCenter, float sphereRadius)
     {
         // Check if any vertex of the triangle is inside the sphere
         if (IsPointInsideSphere(v0, sphereCenter, sphereRadius) ||
@@ -28,18 +28,18 @@ public static class CollisionDetection
     }
 
 
-    public bool IsPointInsideSphere(float3 point, float3 sphereCenter, float sphereRadius)
+    public static bool IsPointInsideSphere(float3 point, float3 sphereCenter, float sphereRadius)
     {
         return distance(point, sphereCenter) <= sphereRadius;
     }
 
-    public bool IsSegmentIntersectingSphere(float3 p1, float3 p2, float3 sphereCenter, float sphereRadius)
+    public static bool IsSegmentIntersectingSphere(float3 p1, float3 p2, float3 sphereCenter, float sphereRadius)
     {
         float3 closestPoint = ClosestPointOnSegment(p1, p2, sphereCenter);
         return IsPointInsideSphere(closestPoint, sphereCenter, sphereRadius);
     }
 
-    public float3 ClosestPointOnSegment(float3 a, float3 b, float3 point)
+    public static float3 ClosestPointOnSegment(float3 a, float3 b, float3 point)
     {
         float3 ab = b - a;
         float t = dot(point - a, ab) / dot(ab, ab);
@@ -47,12 +47,12 @@ public static class CollisionDetection
         return a + t * ab;
     }
 
-    public bool IsSphereIntersectingTrianglePlane(float3 v0, float3 v1, float3 v2, float3 sphereCenter, float sphereRadius)
+    public static bool IsSphereIntersectingTrianglePlane(float3 v0, float3 v1, float3 v2, float3 sphereCenter, float sphereRadius)
     {
         float3 normal = normalize(cross(v1 - v0, v2 - v0));
         float distance = dot(sphereCenter - v0, normal);
 
-        if (abs(distance) > sphereRadius)
+        if (Mathf.Abs(distance) > sphereRadius)
         {
             return false;
         }
@@ -61,7 +61,7 @@ public static class CollisionDetection
         return IsPointInTriangle(projection, v0, v1, v2);
     }
 
-    public bool IsPointInTriangle(float3 p, float3 a, float3 b, float3 c)
+    public static bool IsPointInTriangle(float3 p, float3 a, float3 b, float3 c)
     {
         float3 v0 = c - a;
         float3 v1 = b - a;

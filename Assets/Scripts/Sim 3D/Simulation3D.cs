@@ -1,13 +1,6 @@
 using System.Collections.Generic;
-using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
-
-struct MyDictionary
-{
-    public float3 myPoint;
-    //public float3[] myTriangles;
-};
 
 public class Simulation3D : MonoBehaviour
 {
@@ -85,7 +78,7 @@ public class Simulation3D : MonoBehaviour
     //{
     //    testedObject = GetComponent<TestedObject>();
     //}
-
+    Dictionary<float3, float3[]> pointsTrianglesMap;
 
     void Start()
     {
@@ -294,7 +287,6 @@ public class Simulation3D : MonoBehaviour
 
     }
 
-    // Set Tested Object buffers 
     void SetPointsTriangles(TestedObject testedObject)
     {
         float3[] allPoints = new float3[testedObject.vertices.Length];
@@ -310,7 +302,29 @@ public class Simulation3D : MonoBehaviour
         int[] allTriagnles = new int[testedObject.triangles.Length];
         System.Array.Copy(testedObject.triangles, allTriagnles, testedObject.triangles.Length);
 
-        MyDictionary[] myDictionary = new MyDictionary[allPoints.Length];
+        PointsBuffer.SetData(allPoints);
+        TrianglesBuffer.SetData(allTriagnles);
+
+        //MapBuffer.SetData(myDictionary);
+    }
+
+    // Set Tested Object buffers 
+    void MakeDictionary(TestedObject testedObject)
+    {
+        float3[] allPoints = new float3[testedObject.vertices.Length];
+        //System.Array.Copy(testedObject.vertices, allPoints, testedObject.vertices.Length);
+        for (int i = 0; i < testedObject.vertices.Length; i++)
+        {
+            allPoints[i].x = testedObject.vertices[i].x;
+            allPoints[i].y = testedObject.vertices[i].y;
+            allPoints[i].z = testedObject.vertices[i].z;
+        }
+
+
+        int[] allTriagnles = new int[testedObject.triangles.Length];
+        System.Array.Copy(testedObject.triangles, allTriagnles, testedObject.triangles.Length);
+
+        pointsTrianglesMap = new();
 
         for (int i = 0; i < allPoints.Length; i++)
         {
@@ -341,15 +355,96 @@ public class Simulation3D : MonoBehaviour
                 }
             }
 
-
-            myDictionary[i].myPoint = allPoints[i];
-            //myDictionary[i].myTriangles = new float3[allTriagnles.Length];
-            //System.Array.Copy(myTriangles, myDictionary[i].myTriangles, myTriangles.Length);
+            pointsTrianglesMap.Add(allPoints[i], myTriangles);
         }
 
-        PointsBuffer.SetData(allPoints);
-        TrianglesBuffer.SetData(allTriagnles);
+    }
 
-        //MapBuffer.SetData(myDictionary);
+
+    public void GetAndSetShaderData()
+    {
+        float3[] PredictedPositions = new float3[predictedPositionsBuffer.count];
+        predictedPositionsBuffer.GetData(PredictedPositions);
+        //AsyncGPUReadback.Request(predictedPositionsBuffer, (asyncGPUReadbackRequest) => 
+        //{
+        //    if(asyncGPUReadbackRequest.done)
+        //        predictedPositionsBuffer.GetData(PredictedPositions);
+        //});
+
+        float3[] Velocities = new float3[VelocityBuffer.count];
+        VelocityBuffer.GetData(Velocities);
+
+        uint3[] SpatialIndices = new uint3[spatialIndices.count];
+        spatialIndices.GetData(SpatialIndices);
+
+        uint[] SpatialOffsets = new uint[spatialOffsets.count];
+        spatialOffsets.GetData(SpatialOffsets);
+
+        float3[] Points = new float3[PointsBuffer.count];
+        PointsBuffer.GetData(Points);
+
+        uint[] Triangles = new uint[TrianglesBuffer.count];
+        TrianglesBuffer.GetData(Triangles);
+
+        uint3[] PointsIndices = new uint3[pointsIndices.count];
+        pointsIndices.GetData(PointsIndices);
+
+        uint[] PointsOffsets = new uint[pointsOffsets.count];
+        pointsOffsets.GetData(PointsOffsets);
+
+
+
+
+        VelocityBuffer.SetData(Velocities);
+    }
+
+
+    void CheckCollision(float3 partilce)
+    {
+        int3 originCell = GetCell3D(partilce, smoothingRadius);
+
+        //Neighbour search
+        for (int i = 0; i < 27; i++)
+        {
+            uint hash = HashCell3D(originCell + offsets3D[i]);
+            uint key = KeyFromHash(hash, PositionBuffer.count);
+            uint currIndex = PointsOffsets[key];
+
+            while (currIndex < PositionBuffer.count)
+            {
+                uint3 indexData = PointsIndices[currIndex];
+                currIndex++;
+                // Exit if no longer looking at correct bin
+                if (indexData[2] != key)
+                    break;
+                // Skip if hash does not match
+                if (indexData[1] != hash)
+                    continue;
+
+                uint neighbourIndex = indexData[0];
+
+                float3 neighbourPoint = Points[neighbourIndex];
+
+                for (int j = 0; j < pointsTrianglesMap[neighbourPoint].Length; j++)
+                {
+                    if (pointsTrianglesMap[neighbourPoint][j].x == 0 &&
+                        pointsTrianglesMap[neighbourPoint][j].y == 0 &&
+                        pointsTrianglesMap[neighbourPoint][j].z == 0)
+                        break;
+
+                    var isCollide = CollisionDetection.IsCollided
+                    (
+                        pointsTrianglesMap[neighbourPoint][j],
+                        pointsTrianglesMap[neighbourPoint][j + 1],
+                        pointsTrianglesMap[neighbourPoint][j + 2],
+                        partilce,
+                        smoothingRadius
+                    );
+
+
+                }
+                
+            }
+        }
     }
 }
