@@ -12,6 +12,8 @@ public class Simulation3D : MonoBehaviour
     public int iterationsPerFrame;
     public float gravity = -10;
 
+    public bool checkCollision = false;
+
     [Range(0, 1)]
     public float collisionDamping = 0.05f;
 
@@ -145,6 +147,7 @@ public class Simulation3D : MonoBehaviour
         // Tessted Object 
         gpuSort.SetPointsBuffers(pointsIndices, pointsOffsets);
 
+        MakeDictionary(testedObject);
         // Init display
         display.Init(this);
     }
@@ -205,6 +208,9 @@ public class Simulation3D : MonoBehaviour
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: pressureKernel);
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: viscosityKernel);
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: updatePositionsKernel);
+
+        if(checkCollision)
+            GetAndSetShaderData();
     }
 
     void UpdateSettings(float deltaTime)
@@ -355,7 +361,10 @@ public class Simulation3D : MonoBehaviour
                 }
             }
 
-            pointsTrianglesMap.Add(allPoints[i], myTriangles);
+            if(!pointsTrianglesMap.ContainsKey(allPoints[i]))
+                pointsTrianglesMap.Add(allPoints[i], myTriangles);
+            else
+                pointsTrianglesMap[allPoints[i]] = myTriangles;
         }
 
     }
@@ -392,22 +401,28 @@ public class Simulation3D : MonoBehaviour
         uint[] PointsOffsets = new uint[pointsOffsets.count];
         pointsOffsets.GetData(PointsOffsets);
 
-
-
+        for (int i = 0; i < PredictedPositions.Length; i++)
+        {
+            var isCollide = CheckCollision(PredictedPositions[i], PointsIndices, PointsOffsets, Points);
+            if(isCollide)
+            {
+                Velocities[i] = -1 * Velocities[i];
+            }
+        }
 
         VelocityBuffer.SetData(Velocities);
     }
 
 
-    void CheckCollision(float3 partilce)
+    bool CheckCollision(float3 partilce, uint3[] PointsIndices, uint[] PointsOffsets, float3[] Points)
     {
-        int3 originCell = GetCell3D(partilce, smoothingRadius);
+        int3 originCell = SpatialHash3D.GetCell3D(partilce, smoothingRadius);
 
         //Neighbour search
         for (int i = 0; i < 27; i++)
         {
-            uint hash = HashCell3D(originCell + offsets3D[i]);
-            uint key = KeyFromHash(hash, PositionBuffer.count);
+            uint hash = SpatialHash3D.HashCell3D(originCell + SpatialHash3D.offsets3D[i]);
+            uint key = SpatialHash3D.KeyFromHash(hash, (uint) PositionBuffer.count);
             uint currIndex = PointsOffsets[key];
 
             while (currIndex < PositionBuffer.count)
@@ -441,10 +456,14 @@ public class Simulation3D : MonoBehaviour
                         smoothingRadius
                     );
 
+                    if (isCollide)
+                        return true;
 
                 }
                 
             }
         }
+
+        return false;
     }
 }
