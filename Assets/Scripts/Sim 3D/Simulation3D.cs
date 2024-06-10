@@ -280,7 +280,8 @@ public class Simulation3D : MonoBehaviour
 
     void OnDestroy()
     {
-        ComputeHelper.Release(PositionBuffer, predictedPositionsBuffer, VelocityBuffer, DensityBuffer, spatialIndices, spatialOffsets, PointsBuffer, TrianglesBuffer, pointsIndices, pointsOffsets); // MapBuffer
+        ComputeHelper.Release(PositionBuffer, predictedPositionsBuffer, VelocityBuffer, DensityBuffer, spatialIndices, spatialOffsets);
+            //PointsBuffer, TrianglesBuffer, pointsIndices, pointsOffsets); // MapBuffer
     }
 
     void OnDrawGizmos()
