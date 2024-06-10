@@ -12,6 +12,13 @@ public class ParticleDisplay3D : MonoBehaviour
     ComputeBuffer argsBuffer;
     Bounds bounds;
 
+    //// Tested Object Compute Buffer
+    //ComputeBuffer testedObjectArgsBuffer;
+    //Mesh testedObjectMesh;
+    //Material testedObjectMat;
+    //Bounds testedObjectBounds;
+
+
     public Gradient colourMap;
     public int gradientResolution;
     public float velocityDisplayMax;
@@ -24,6 +31,9 @@ public class ParticleDisplay3D : MonoBehaviour
     public int meshResolution;
     public int debug_MeshTriCount;
 
+    //// Tested Object Compute Buffer
+    //public int tested_object_debug_MeshTriCount;
+    
     public void Init(Simulation3D sim)
     {
         mat = new Material(shader);
@@ -34,6 +44,15 @@ public class ParticleDisplay3D : MonoBehaviour
         debug_MeshTriCount = mesh.triangles.Length / 3;
         argsBuffer = ComputeHelper.CreateArgsBuffer(mesh, sim.PositionBuffer.count);
         bounds = new Bounds(Vector3.zero, Vector3.one * 10000);
+
+        //// Tested Object
+        //testedObjectMat = new Material(shader);
+        //testedObjectMat.SetBuffer("Points", sim.PointsBuffer);
+
+        //testedObjectMesh = SebStuff.SphereGenerator.GenerateSphereMesh(meshResolution);
+        //tested_object_debug_MeshTriCount = mesh.triangles.Length / 3;
+        //testedObjectArgsBuffer = ComputeHelper.CreateArgsBuffer(mesh, sim.PointsBuffer.count);
+        //testedObjectBounds = new Bounds(Vector3.zero, Vector3.one * 10000);
     }
 
     void LateUpdate()
@@ -41,6 +60,9 @@ public class ParticleDisplay3D : MonoBehaviour
 
         UpdateSettings();
         Graphics.DrawMeshInstancedIndirect(mesh, 0, mat, bounds, argsBuffer);
+
+        // Tested Object
+        //Graphics.DrawMeshInstancedIndirect(testedObjectMesh, 0, mat, testedObjectBounds, testedObjectArgsBuffer);
     }
 
     void UpdateSettings()

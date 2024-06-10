@@ -5,11 +5,14 @@
 #pragma kernel CalculateViscosity
 #pragma kernel UpdatePositions
 
+// Tested Object
+//#pragma kernel UpdatePointsHash
+
 // Includes
 #include "./FluidMaths3D.hlsl"
 #include "./SpatialHash3D.hlsl"
 
-static const int NumThreads = 256;
+static const int NumThreads = 64;
 
 // Buffers
 RWStructuredBuffer<float3> Positions;
@@ -18,6 +21,24 @@ RWStructuredBuffer<float3> Velocities;
 RWStructuredBuffer<float2> Densities; // Density, Near Density
 RWStructuredBuffer<uint3> SpatialIndices; // used for spatial hashing
 RWStructuredBuffer<uint> SpatialOffsets; // used for spatial hashing
+
+// Tested Object
+RWStructuredBuffer<float3> Points;
+RWStructuredBuffer<uint> Triangles;
+RWStructuredBuffer<uint3> PointsIndices; // used for spatial hashing
+RWStructuredBuffer<uint> PointsOffsets; // used for spatial hashing
+
+//struct MyDictionary
+//{
+//   float3 myPoint;
+//    RWStructuredBuffer<float3> myTriangles;
+//};
+//RWStructuredBuffer<MyDictionary> Map;
+
+
+
+// Object Settings
+const uint numPoints;
 
 // Settings
 const uint numParticles;
@@ -30,11 +51,6 @@ const float windStrength;
 // Wind Area Bounds
 const float3 windAreaMin;
 const float3 windAreaMax; 
-
-// // Sphere
-// static const float3 sphereCenter = float3(0, 0, 0);
-// static const float sphereRadius = 0.5;
-
 
 const float deltaTime;
 const float collisionDamping;
@@ -67,6 +83,7 @@ float NearPressureFromDensity(float nearDensity)
 
 void ResolveCollisions(uint particleIndex)
 {
+    float3 pos = Positions[particleIndex];
 	// Transform position/velocity to the local space of the bounding box (scale not included)
 	float3 posLocal = mul(worldToLocal, float4(Positions[particleIndex], 1)).xyz;
 	float3 velocityLocal = mul(worldToLocal, float4(Velocities[particleIndex], 0)).xyz;
@@ -138,6 +155,43 @@ void ResolveCollisions(uint particleIndex)
 	Positions[particleIndex] = mul(localToWorld, float4(posLocal, 1)).xyz;
 	Velocities[particleIndex] = mul(localToWorld, float4(velocityLocal, 0)).xyz;
 
+}
+
+void ResovleObjectCollisions(float3 pos)
+{
+    int3 originCell = GetCell3D(pos, smoothingRadius);
+	
+	// Neighbour search
+    for (int i = 0; i < 27; i++)
+    {
+        uint hash = HashCell3D(originCell + offsets3D[i]);
+        uint key = KeyFromHash(hash, numParticles);
+        uint currIndex = PointsOffsets[key];
+
+        while (currIndex < numParticles)
+        {
+            uint3 indexData = PointsIndices[currIndex];
+            currIndex++;
+			// Exit if no longer looking at correct bin
+            if (indexData[2] != key)
+                break;
+			// Skip if hash does not match
+            if (indexData[1] != hash)
+                continue;
+
+            uint neighbourIndex = indexData[0];
+
+            float3 neighbourPos = Points[neighbourIndex];
+			
+			
+        }
+    }
+	
+}
+
+void TrianglesFromPoint(uint pointPosition)
+{
+	
 }
 
 [numthreads(NumThreads,1,1)]
@@ -343,4 +397,21 @@ void UpdatePositions(uint3 id : SV_DispatchThreadID)
 
 	Positions[id.x] += Velocities[id.x] * deltaTime;
 	ResolveCollisions(id.x);
+}
+
+// Tested Object
+[NumThreads(NumThreads, 1, 1)]
+void UpdatePointsHash(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= numPoints) return;
+	
+    // Reset offsets
+    PointsOffsets[id.x] = numPoints;
+	
+	// Update index buffer
+    uint index = id.x;
+    int3 cell = GetCell3D(Points[index], smoothingRadius);
+    uint hash = HashCell3D(cell);
+    uint key = KeyFromHash(hash, numParticles);
+    PointsIndices[id.x] = uint3(index, hash, key);
 }

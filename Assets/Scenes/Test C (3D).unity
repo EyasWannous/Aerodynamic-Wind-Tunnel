@@ -292,6 +292,7 @@ MonoBehaviour:
   spawner: {fileID: 271053323}
   display: {fileID: 271053320}
   floorDisplay: {fileID: 620375868}
+  testedObject: {fileID: 677912169}
 --- !u!114 &271053320
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -542,6 +543,7 @@ GameObject:
   - component: {fileID: 677912167}
   - component: {fileID: 677912166}
   - component: {fileID: 677912165}
+  - component: {fileID: 677912169}
   m_Layer: 0
   m_Name: Sphere
   m_TagString: Untagged
@@ -629,12 +631,26 @@ Transform:
   m_GameObject: {fileID: 677912164}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 23.74, y: -0.34, z: -9.11}
+  m_LocalPosition: {x: 9.61, y: -1.04, z: -0.12}
   m_LocalScale: {x: 5, y: 5, z: 5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &677912169
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 677912164}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 506223afd0060b14e8b2658ada40019b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  vertices: []
+  triangles: 
 --- !u!1001 &794935458
 PrefabInstance:
   m_ObjectHideFlags: 0
