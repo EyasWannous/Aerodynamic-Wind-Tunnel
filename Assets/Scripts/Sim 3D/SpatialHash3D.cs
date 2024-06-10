@@ -1,56 +1,60 @@
-public class SpatialHash3D
+using Unity.Mathematics;
+using static Unity.Mathematics.math;
+
+public static class SpatialHash3D
 {
 
-    static const int3 offsets3D[27] =
+    static int3[] offsets3D = new int3[]
     {
-        int3(-1, -1, -1),
-        int3(-1, -1, 0),
-        int3(-1, -1, 1),
-        int3(-1, 0, -1),
-        int3(-1, 0, 0),
-        int3(-1, 0, 1),
-        int3(-1, 1, -1),
-        int3(-1, 1, 0),
-        int3(-1, 1, 1),
-        int3(0, -1, -1),
-        int3(0, -1, 0),
-        int3(0, -1, 1),
-        int3(0, 0, -1),
-        int3(0, 0, 0),
-        int3(0, 0, 1),
-        int3(0, 1, -1),
-        int3(0, 1, 0),
-        int3(0, 1, 1),
-        int3(1, -1, -1),
-        int3(1, -1, 0),
-        int3(1, -1, 1),
-        int3(1, 0, -1),
-        int3(1, 0, 0),
-        int3(1, 0, 1),
-        int3(1, 1, -1),
-        int3(1, 1, 0),
-        int3(1, 1, 1)
+        new int3(-1, -1, -1),
+        new int3(-1, -1, 0),
+        new int3(-1, -1, 1),
+        new int3(-1, 0, -1),
+        new int3(-1, 0, 0),
+        new int3(-1, 0, 1),
+        new int3(-1, 1, -1),
+        new int3(-1, 1, 0),
+        new int3(-1, 1, 1),
+        new int3(0, -1, -1),
+        new int3(0, -1, 0),
+        new int3(0, -1, 1),
+        new int3(0, 0, -1),
+        new int3(0, 0, 0),
+        new int3(0, 0, 1),
+        new int3(0, 1, -1),
+        new int3(0, 1, 0),
+        new int3(0, 1, 1),
+        new int3(1, -1, -1),
+        new int3(1, -1, 0),
+        new int3(1, -1, 1),
+        new int3(1, 0, -1),
+        new int3(1, 0, 0),
+        new int3(1, 0, 1),
+        new int3(1, 1, -1),
+        new int3(1, 1, 0),
+        new int3(1, 1, 1),
+        new int3(new)
     };
 
     // Constants used for hashing
-    static const uint hashK1 = 15823;
-    static const uint hashK2 = 9737333;
-    static const uint hashK3 = 440817757;
+    static uint hashK1 = 15823;
+    static uint hashK2 = 9737333;
+    static uint hashK3 = 440817757;
 
     // Convert floating point position into an integer cell coordinate
-    int3 GetCell3D(float3 position, float radius)
+    static int3 GetCell3D(float3 position, float radius)
     {
         return (int3)floor(position / radius);
     }
 
     // Hash cell coordinate to a single unsigned integer
-    uint HashCell3D(int3 cell)
+    static uint HashCell3D(int3 cell)
     {
-        cell = (uint3)cell;
-        return (cell.x * hashK1) + (cell.y * hashK2) + (cell.z * hashK3);
+        uint3 ucell = (uint3)cell;
+        return (ucell.x * hashK1) + (ucell.y * hashK2) + (ucell.z * hashK3);
     }
 
-    uint KeyFromHash(uint hash, uint tableSize)
+    static uint KeyFromHash(uint hash, uint tableSize)
     {
         return hash % tableSize;
     }
