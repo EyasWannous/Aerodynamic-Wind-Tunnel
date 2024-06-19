@@ -8,6 +8,8 @@
 
 #pragma kernel UpdatePointsHash
 
+// Debug
+#pragma enable_d3d11_debug_symbols 
 
 // Includes
 #include "./FluidMaths3D.hlsl"
@@ -165,12 +167,17 @@ void ColisionPointTriangles(uint particleIndex)
 {
     float3 pos = Positions[particleIndex];
 	// Transform position/velocity to the local space of the bounding box (scale not included)
-    // float3 posLocal = mul(worldToLocal, float4(Positions[particleIndex], 1)).xyz;
+    float3 posLocal = mul(worldToLocal, float4(Positions[particleIndex], 1)).xyz;
     float3 velocityLocal = mul(worldToLocal, float4(Velocities[particleIndex], 0)).xyz;
 	
-    for (uint i = 0; i < numTriangles; i ++)
+    for (uint i = 0; i < numTriangles; i += 3)
     {
-        if (IsCollided(Points[Triangles[i]], Points[Triangles[i + 1]], Points[Triangles[i + 2]], pos, smoothingRadius))
+        float3 firstPoint  = mul(worldToLocal, float4(Points[Triangles[i]], 0)).xyz;
+        float3 secondPoint = mul(worldToLocal, float4(Points[Triangles[i + 1]], 0)).xyz;
+        float3 thirdPoint  = mul(worldToLocal, float4(Points[Triangles[i + 2]], 0)).xyz;
+         
+		//if (IsCollided(Points[Triangles[i]], Points[Triangles[i + 1]], Points[Triangles[i + 2]], pos, smoothingRadius))
+        if (IsCollided(firstPoint, secondPoint, thirdPoint, posLocal, smoothingRadius))
         {
             velocityLocal.x *= 0;
             velocityLocal.y *= 0;
@@ -182,8 +189,11 @@ void ColisionPointTriangles(uint particleIndex)
 
 void UpdatePointsHash(uint3 id)
 {
-   if (id.x >= numPoints) return;
+	if (id.x >= numPoints) return;
 	
+//    if (Points[id.x].x == 0 && Points[id.x].y == 0 && Points[id.x].z == 0)
+//        continue;
+		
 	// Reset offsets
     PointsOffsets[id.x] = numPoints;
 	
@@ -191,7 +201,7 @@ void UpdatePointsHash(uint3 id)
 	uint index = id.x;
     int3 cell = GetCell3D(Points[index], smoothingRadius);
     uint hash = HashCell3D(cell);
-    uint key = KeyFromHash(hash, numPoints);
+    uint key = KeyFromHash(hash, numParticles);
     PointsIndices[id.x] = uint3(index, hash, key);
 }
 

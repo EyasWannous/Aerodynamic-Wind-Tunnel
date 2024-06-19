@@ -221,8 +221,18 @@ public class Simulation3D : MonoBehaviour
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: viscosityKernel);
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: updatePositionsKernel);
 
-        Points = new float3[PointsBuffer.count];
-        PointsBuffer.GetData(Points);
+        //uint[] Triangles = new uint[TrianglesBuffer.count];
+        //TrianglesBuffer.GetData(Triangles);
+        
+        //Points = new float3[PointsBuffer.count];
+        //PointsBuffer.GetData(Points);
+
+        //uint3[] PointsIndices = new uint3[pointsIndices.count];
+        //pointsIndices.GetData(PointsIndices);
+
+        //uint[] PointsOffsets = new uint[pointsOffsets.count];
+        //pointsOffsets.GetData(PointsOffsets);
+
         //Console.WriteLine("--------------------");
         //if(checkCollision)
         //    GetAndSetShaderData();

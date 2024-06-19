@@ -1,8 +1,8 @@
-cbuffer Constants : register(b0)
-{
-	float3 sphereCenter;
-	float sphereRadius;
-};
+//cbuffer Constants : register(b0)
+//{
+//	float3 sphereCenter;
+//	float sphereRadius;
+//};
 
 bool IsPointInsideSphere(float3 pos, float3 sphereCenter, float sphereRadius)
 {
