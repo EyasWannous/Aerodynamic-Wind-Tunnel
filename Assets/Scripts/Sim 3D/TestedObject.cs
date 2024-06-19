@@ -29,7 +29,7 @@ public class TestedObject : MonoBehaviour
         vertices = mesh.vertices;
         triangles = mesh.triangles;
 
-        PrintVerticesAndTriangles();
+        //PrintVerticesAndTriangles();
     }
 
     void PrintVerticesAndTriangles()

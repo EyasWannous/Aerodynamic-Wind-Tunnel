@@ -3,14 +3,16 @@
 #pragma kernel CalculateDensities
 #pragma kernel CalculatePressureForce
 #pragma kernel CalculateViscosity
+
 #pragma kernel UpdatePositions
 
-// Tested Object
-//#pragma kernel UpdatePointsHash
+#pragma kernel UpdatePointsHash
+
 
 // Includes
 #include "./FluidMaths3D.hlsl"
 #include "./SpatialHash3D.hlsl"
+#include "./Colision.hlsl"
 
 static const int NumThreads = 64;
 
@@ -30,15 +32,16 @@ RWStructuredBuffer<uint> PointsOffsets; // used for spatial hashing
 
 //struct MyDictionary
 //{
-//   float3 myPoint;
-//    RWStructuredBuffer<float3> myTriangles;
+//	float3 myPoint;
+//	RWStructuredBuffer<float3> myTriangles;
 //};
-//RWStructuredBuffer<MyDictionary> Map;
+RWStructuredBuffer<float3> Map;
 
 
 
 // Object Settings
 const uint numPoints;
+const uint numTriangles;
 
 // Settings
 const uint numParticles;
@@ -107,7 +110,7 @@ void ResolveCollisions(uint particleIndex)
     }
     else if (posLocal.x < -halfSize.x)
     {
-       posLocal.x = halfSize.x;
+		posLocal.x = halfSize.x;
 		velocityLocal.x *= collisionDamping;
     }
 	
@@ -155,6 +158,41 @@ void ResolveCollisions(uint particleIndex)
 	Positions[particleIndex] = mul(localToWorld, float4(posLocal, 1)).xyz;
 	Velocities[particleIndex] = mul(localToWorld, float4(velocityLocal, 0)).xyz;
 
+}
+
+
+void ColisionPointTriangles(uint particleIndex)
+{
+    float3 pos = Positions[particleIndex];
+	// Transform position/velocity to the local space of the bounding box (scale not included)
+    // float3 posLocal = mul(worldToLocal, float4(Positions[particleIndex], 1)).xyz;
+    float3 velocityLocal = mul(worldToLocal, float4(Velocities[particleIndex], 0)).xyz;
+	
+    for (uint i = 0; i < numTriangles; i ++)
+    {
+        if (IsCollided(Points[Triangles[i]], Points[Triangles[i + 1]], Points[Triangles[i + 2]], pos, smoothingRadius))
+        {
+            velocityLocal.x *= 0;
+            velocityLocal.y *= 0;
+            velocityLocal.z *= 0;
+            Velocities[particleIndex] = mul(localToWorld, float4(velocityLocal, 0)).xyz;
+        }
+    }
+}
+
+void UpdatePointsHash(uint3 id)
+{
+   if (id.x >= numPoints) return;
+	
+	// Reset offsets
+    PointsOffsets[id.x] = numPoints;
+	
+	// Update index buffer
+	uint index = id.x;
+    int3 cell = GetCell3D(Points[index], smoothingRadius);
+    uint hash = HashCell3D(cell);
+    uint key = KeyFromHash(hash, numPoints);
+    PointsIndices[id.x] = uint3(index, hash, key);
 }
 
 // Tested Object
@@ -230,6 +268,8 @@ void UpdateSpatialHash (uint3 id : SV_DispatchThreadID)
 	uint hash = HashCell3D(cell);
 	uint key = KeyFromHash(hash, numParticles);
 	SpatialIndices[id.x] = uint3(index, hash, key);
+	
+    UpdatePointsHash(id);
 }
 
 [numthreads(NumThreads,1,1)]
@@ -274,6 +314,19 @@ void CalculateDensities (uint3 id : SV_DispatchThreadID)
 			nearDensity += NearDensityKernel(dst, smoothingRadius);
 		}
 	}
+	
+    //if (id.x >= numPoints)
+    //    return;
+	
+	//  Reset offsets
+    //PointsOffsets[id.x] = numPoints;
+	
+	// Update index buffer
+	//uint index = id.x;
+    //int3 cell = GetCell3D(Points[index], smoothingRadius);
+    //uint hash = HashCell3D(cell);
+    //uint key = KeyFromHash(hash, numPoints);
+    //PointsIndices[id.x] = uint3(index, hash, key);
 	
 	Densities[id.x] = float2(density, nearDensity);
 }
@@ -398,21 +451,23 @@ void UpdatePositions(uint3 id : SV_DispatchThreadID)
 
 	Positions[id.x] += Velocities[id.x] * deltaTime;
 	ResolveCollisions(id.x);
+	
+    ColisionPointTriangles(id.x);
 }
 
 // Tested Object
-[NumThreads(NumThreads, 1, 1)]
-void UpdatePointsHash(uint3 id : SV_DispatchThreadID)
-{
-    if (id.x >= numPoints) return;
+//[numThreads(NumThreads, 1, 1)]
+//void UpdatePointsHash(uint3 id : SV_DispatchThreadID)
+//{
+//   if (id.x >= numPoints) return;
 	
-    // Reset offsets
-    PointsOffsets[id.x] = numPoints;
+	//Reset offsets
+//    PointsOffsets[id.x] = numPoints;
 	
-	// Update index buffer
-	uint index = id.x;
-    int3 cell = GetCell3D(Points[index], smoothingRadius);
-    uint hash = HashCell3D(cell);
-    uint key = KeyFromHash(hash, numParticles);
-    PointsIndices[id.x] = uint3(index, hash, key);
-}
+	//Update index buffer
+//	uint index = id.x;
+//    int3 cell = GetCell3D(Points[index], smoothingRadius);
+//    uint hash = HashCell3D(cell);
+//    uint key = KeyFromHash(hash, numPoints);
+//    PointsIndices[id.x] = uint3(index, hash, key);
+//}
