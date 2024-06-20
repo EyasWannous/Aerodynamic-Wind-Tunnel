@@ -71,7 +71,7 @@ public class Simulation3D : MonoBehaviour
 
     //// Tested Object GPUSort
     //GPUSort testedObjectGPUSort;
-    private float3[] Points;
+
 
     // State
     bool isPaused;
@@ -221,19 +221,27 @@ public class Simulation3D : MonoBehaviour
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: viscosityKernel);
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: updatePositionsKernel);
 
-        //uint[] Triangles = new uint[TrianglesBuffer.count];
-        //TrianglesBuffer.GetData(Triangles);
-        
-        //Points = new float3[PointsBuffer.count];
-        //PointsBuffer.GetData(Points);
+        uint[] Triangles = new uint[TrianglesBuffer.count];
+        TrianglesBuffer.GetData(Triangles);
 
-        //uint3[] PointsIndices = new uint3[pointsIndices.count];
-        //pointsIndices.GetData(PointsIndices);
+        float3[] Points = new float3[PointsBuffer.count];
+        PointsBuffer.GetData(Points);
 
-        //uint[] PointsOffsets = new uint[pointsOffsets.count];
-        //pointsOffsets.GetData(PointsOffsets);
+        //string json = JsonUtility.ToJson(Points);
+        //Console.WriteLine(json);
 
-        //Console.WriteLine("--------------------");
+        uint3[] PointsIndices = new uint3[pointsIndices.count];
+        pointsIndices.GetData(PointsIndices);
+
+        uint[] PointsOffsets = new uint[pointsOffsets.count];
+        pointsOffsets.GetData(PointsOffsets);
+
+        //for (int i = 0; i < Points.Length; i++)
+        //{
+        //    Debug.Log(Points[i]);
+        //}
+
+        //Console.WriteLine("");
         //if(checkCollision)
         //    GetAndSetShaderData();
     }

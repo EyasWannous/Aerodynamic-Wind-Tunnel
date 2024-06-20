@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 [RequireComponent(typeof(MeshFilter))]
 public class TestedObject : MonoBehaviour
@@ -25,8 +26,14 @@ public class TestedObject : MonoBehaviour
         }
 
         mesh = meshFilter.mesh;
-
+        
         vertices = mesh.vertices;
+        
+        for (int i = 0; i < vertices.Length; i++) 
+        {
+            vertices[i] = transform.TransformPoint(vertices[i]);
+        }
+
         triangles = mesh.triangles;
 
         //PrintVerticesAndTriangles();
