@@ -1,0 +1,252 @@
+#pragma kernel CSMain
+
+// Constants
+#define THREADS_PER_GROUP 256
+
+// Buffers
+RWStructuredBuffer<float3> positions;
+RWStructuredBuffer<float3> velocities;
+StructuredBuffer<float3> initialPositions;
+StructuredBuffer<float> masses;
+StructuredBuffer<float3> windForceBuffer;
+float alpha;
+float timeStep;
+float forceThreshold;
+float3 initialCenterOfMass;
+
+
+float3 ComputeCenterOfMass(RWStructuredBuffer<float3> points, StructuredBuffer<float> masses, int count)
+{
+    float3 centerOfMass = float3(0, 0, 0);
+    float totalMass = 0;
+    for (int i = 0; i < count; i++)
+    {
+        centerOfMass += points[i] * masses[i];
+        totalMass += masses[i];
+    }
+    return centerOfMass / totalMass;
+}
+
+float4x4 Inverse(float4x4 m)
+{
+    float4x4 inv;
+    float det;
+
+    inv[0][0] = m[1][1] * m[2][2] * m[3][3] -
+                m[1][1] * m[2][3] * m[3][2] -
+                m[2][1] * m[1][2] * m[3][3] +
+                m[2][1] * m[1][3] * m[3][2] +
+                m[3][1] * m[1][2] * m[2][3] -
+                m[3][1] * m[1][3] * m[2][2];
+
+    inv[1][0] = -m[1][0] * m[2][2] * m[3][3] +
+                 m[1][0] * m[2][3] * m[3][2] +
+                 m[2][0] * m[1][2] * m[3][3] -
+                 m[2][0] * m[1][3] * m[3][2] -
+                 m[3][0] * m[1][2] * m[2][3] +
+                 m[3][0] * m[1][3] * m[2][2];
+
+    inv[2][0] = m[1][0] * m[2][1] * m[3][3] -
+                m[1][0] * m[2][3] * m[3][1] -
+                m[2][0] * m[1][1] * m[3][3] +
+                m[2][0] * m[1][3] * m[3][1] +
+                m[3][0] * m[1][1] * m[2][3] -
+                m[3][0] * m[1][3] * m[2][1];
+
+    inv[3][0] = -m[1][0] * m[2][1] * m[3][2] +
+                 m[1][0] * m[2][2] * m[3][1] +
+                 m[2][0] * m[1][1] * m[3][2] -
+                 m[2][0] * m[1][2] * m[3][1] -
+                 m[3][0] * m[1][1] * m[2][2] +
+                 m[3][0] * m[1][2] * m[2][1];
+
+    inv[0][1] = -m[0][1] * m[2][2] * m[3][3] +
+                 m[0][1] * m[2][3] * m[3][2] +
+                 m[2][1] * m[0][2] * m[3][3] -
+                 m[2][1] * m[0][3] * m[3][2] -
+                 m[3][1] * m[0][2] * m[2][3] +
+                 m[3][1] * m[0][3] * m[2][2];
+
+    inv[1][1] = m[0][0] * m[2][2] * m[3][3] -
+                m[0][0] * m[2][3] * m[3][2] -
+                m[2][0] * m[0][2] * m[3][3] +
+                m[2][0] * m[0][3] * m[3][2] +
+                m[3][0] * m[0][2] * m[2][3] -
+                m[3][0] * m[0][3] * m[2][2];
+
+    inv[2][1] = -m[0][0] * m[2][1] * m[3][3] +
+                 m[0][0] * m[2][3] * m[3][1] +
+                 m[2][0] * m[0][1] * m[3][3] -
+                 m[2][0] * m[0][3] * m[3][1] -
+                 m[3][0] * m[0][1] * m[2][3] +
+                 m[3][0] * m[0][3] * m[2][1];
+
+    inv[3][1] = m[0][0] * m[2][1] * m[3][2] -
+                m[0][0] * m[2][2] * m[3][1] -
+                m[2][0] * m[0][1] * m[3][2] +
+                m[2][0] * m[0][2] * m[3][1] +
+                m[3][0] * m[0][1] * m[2][2] -
+                m[3][0] * m[0][2] * m[2][1];
+
+    inv[0][2] = m[0][1] * m[1][2] * m[3][3] -
+                m[0][1] * m[1][3] * m[3][2] -
+                m[1][1] * m[0][2] * m[3][3] +
+                m[1][1] * m[0][3] * m[3][2] +
+                m[3][1] * m[0][2] * m[1][3] -
+                m[3][1] * m[0][3] * m[1][2];
+
+    inv[1][2] = -m[0][0] * m[1][2] * m[3][3] +
+                 m[0][0] * m[1][3] * m[3][2] +
+                 m[1][0] * m[0][2] * m[3][3] -
+                 m[1][0] * m[0][3] * m[3][2] -
+                 m[3][0] * m[0][2] * m[1][3] +
+                 m[3][0] * m[0][3] * m[1][2];
+
+    inv[2][2] = m[0][0] * m[1][1] * m[3][3] -
+                m[0][0] * m[1][3] * m[3][1] -
+                m[1][0] * m[0][1] * m[3][3] +
+                m[1][0] * m[0][3] * m[3][1] +
+                m[3][0] * m[0][1] * m[1][3] -
+                m[3][0] * m[0][3] * m[1][1];
+
+    inv[3][2] = -m[0][0] * m[1][1] * m[3][2] +
+                 m[0][0] * m[1][2] * m[3][1] +
+                 m[1][0] * m[0][1] * m[3][2] -
+                 m[1][0] * m[0][2] * m[3][1] -
+                 m[3][0] * m[0][1] * m[1][2] +
+                 m[3][0] * m[0][2] * m[1][1];
+
+    inv[0][3] = -m[0][1] * m[1][2] * m[2][3] +
+                 m[0][1] * m[1][3] * m[2][2] +
+                 m[1][1] * m[0][2] * m[2][3] -
+                 m[1][1] * m[0][3] * m[2][2] -
+                 m[2][1] * m[0][2] * m[1][3] +
+                 m[2][1] * m[0][3] * m[1][2];
+
+    inv[1][3] = m[0][0] * m[1][2] * m[2][3] -
+                m[0][0] * m[1][3] * m[2][2] -
+                m[1][0] * m[0][2] * m[2][3] +
+                m[1][0] * m[0][3] * m[2][2] +
+                m[2][0] * m[0][2] * m[1][3] -
+                m[2][0] * m[0][3] * m[1][2];
+
+    inv[2][3] = -m[0][0] * m[1][1] * m[2][3] +
+                 m[0][0] * m[1][3] * m[2][1] +
+                 m[1][0] * m[0][1] * m[2][3] -
+                 m[1][0] * m[0][3] * m[2][1] -
+                 m[2][0] * m[0][1] * m[1][3] +
+                 m[2][0] * m[0][3] * m[1][1];
+
+    inv[3][3] = m[0][0] * m[1][1] * m[2][2] -
+                m[0][0] * m[1][2] * m[2][1] -
+                m[1][0] * m[0][1] * m[2][2] +
+                m[1][0] * m[0][2] * m[2][1] +
+                m[2][0] * m[0][1] * m[1][2] -
+                m[2][0] * m[0][2] * m[1][1];
+
+    det = m[0][0] * inv[0][0] + m[0][1] * inv[1][0] + m[0][2] * inv[2][0] + m[0][3] * inv[3][0];
+
+    if (det == 0)
+        return m; // Return the original matrix if it is not invertible
+
+    det = 1.0 / det;
+
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            inv[i][j] *= det;
+        }
+    }
+
+    return inv;
+}
+
+// Computes the outer product of two vectors
+float4x4 OuterProduct(float3 a, float3 b)
+{
+    return float4x4(
+        a.x * b.x, a.x * b.y, a.x * b.z, 0.0,
+        a.y * b.x, a.y * b.y, a.y * b.z, 0.0,
+        a.z * b.x, a.z * b.y, a.z * b.z, 0.0,
+        0.0, 0.0, 0.0, 0.0
+    );
+}
+
+// Adds two 4x4 matrices
+float4x4 AddMatrices(float4x4 a, float4x4 b)
+{
+    return a + b;
+}
+
+// Multiplies a 4x4 matrix by a scalar
+float4x4 MultiplyMatrixByScalar(float4x4 myMatrix, float scalar)
+{
+    return myMatrix * scalar;
+}
+
+// Computes shape matching
+//[numthreads(1, 1, 1)]
+void ShapeMatching(float3 centerOfMass)
+{
+    float3 p[1024]; // Assuming max 1024 vertices, adjust as needed
+    float3 q[1024];
+    float4x4 Apq = float4x4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    float4x4 Aqq = float4x4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+    for (int i = 0; i < THREADS_PER_GROUP; i++)
+    {
+        p[i] = positions[i] - centerOfMass;
+        q[i] = initialPositions[i] - initialCenterOfMass;
+        Apq = AddMatrices(Apq, MultiplyMatrixByScalar(OuterProduct(p[i], q[i]), masses[i]));
+        Aqq = AddMatrices(Aqq, MultiplyMatrixByScalar(OuterProduct(q[i], q[i]), masses[i]));
+    }
+
+    float4x4 AqqInv = Inverse(Aqq);
+    float4x4 A = mul(Apq, AqqInv);
+
+    // For polar decomposition, assuming A is already a rotation matrix
+    float4x4 R = A;
+
+    for (int j = 0; j < THREADS_PER_GROUP; j++)
+    {
+        float3 goalPosition = mul(R, float4(q[j], 1.0)).xyz + centerOfMass;
+        positions[j] = goalPosition * alpha + positions[j] * (1 - alpha);
+    }
+}
+
+// Kernels
+[numthreads(THREADS_PER_GROUP, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    int index = id.x;
+
+    // Apply Wind Force
+    float3 acc = windForceBuffer[0] / masses[index];
+    if (length(acc) > forceThreshold)
+    {
+        velocities[index] += acc * timeStep;
+    }
+
+    // Time Integration
+    if (length(velocities[index]) * masses[index] > forceThreshold)
+    {
+        positions[index] += velocities[index] * timeStep;
+    }
+
+    // Shape Matching (simplified for example)
+    // Compute current center of mass
+    float3 centerOfMass = ComputeCenterOfMass(positions, masses, THREADS_PER_GROUP);
+
+    // Compute relative positions
+    float3 p = positions[index] - centerOfMass;
+    float3 q = initialPositions[index] - initialCenterOfMass;
+
+    // Simplified rotation matrix (identity for example)
+    float3 goalPosition = q + initialCenterOfMass;
+   
+    // Update positions
+    positions[index] = lerp(positions[index], goalPosition, alpha);
+    
+    //ShapeMatching(centerOfMass);
+}

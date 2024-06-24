@@ -98,12 +98,12 @@ public class GPUSort
         Sort();
 
         // Tested Object 
-        SortPoints();
+        //SortPoints();
 
         ComputeHelper.Dispatch(sortCompute, indexBuffer.count, kernelIndex: calculateOffsetsKernel);
 
         // Tested Object 
-        ComputeHelper.Dispatch(TestedObjectSortCompute, TestedObjectindexBuffer.count, kernelIndex: calculateOffsetsKernel);
+        //ComputeHelper.Dispatch(TestedObjectSortCompute, TestedObjectindexBuffer.count, kernelIndex: calculateOffsetsKernel);
     }
 
 }

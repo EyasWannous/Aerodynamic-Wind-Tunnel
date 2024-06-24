@@ -3,30 +3,29 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-[RequireComponent(typeof(MeshFilter))]
 public class TestedObject : MonoBehaviour
 {
-    private Mesh mesh;
+    //private Mesh mesh;
+    public MeshFilter meshFilter;
     public Vector3[] vertices;
     public int[] triangles;
-    //public Dictionary<int, float3[]> pointsTriangles;
 
-    //void Start()
-    //{
-    //    InitializeMesh();
-    //}
+    void Start()
+    {
+        InitializeMesh();
+    }
 
     public void InitializeMesh()
     {
-        MeshFilter meshFilter = GetComponent<MeshFilter>();
-        if (meshFilter == null)
-        {
-            Debug.LogError("MeshFilter component not found on this GameObject.");
-            return;
-        }
+        //MeshFilter meshFilter = GetComponent<MeshFilter>();
+        //if (meshFilter == null)
+        //{
+        //    Debug.LogError("MeshFilter component not found on this GameObject.");
+        //    return;
+        //}
 
-        mesh = meshFilter.mesh;
-        
+        Mesh mesh = meshFilter.mesh;
+
         vertices = mesh.vertices;
         
         for (int i = 0; i < vertices.Length; i++) 
@@ -53,12 +52,4 @@ public class TestedObject : MonoBehaviour
             Debug.Log("Triangle " + (i / 3) + ": " + triangles[i] + ", " + triangles[i + 1] + ", " + triangles[i + 2]);
         }
     }
-
-    //void VerticesTriangles()
-    //{
-    //    for (int i = 0; i < triangles.Length; i += 3)
-    //    {
-
-    //    }
-    //}
 }

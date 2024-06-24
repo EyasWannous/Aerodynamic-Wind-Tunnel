@@ -39,6 +39,7 @@ public class Simulation3D : MonoBehaviour
     public Transform floorDisplay;
     // OBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
     public TestedObject testedObject;
+    public DeformableObjects deformableObjects;
 
     // Buffers
     public ComputeBuffer PositionBuffer { get; private set; }
@@ -51,10 +52,10 @@ public class Simulation3D : MonoBehaviour
     // Tested Object Buffers
     public ComputeBuffer PointsBuffer { get; private set; }
     public ComputeBuffer TrianglesBuffer { get; private set; }
-    ComputeBuffer pointsIndices;
-    ComputeBuffer pointsOffsets;
+    //ComputeBuffer pointsIndices;
+    //ComputeBuffer pointsOffsets;
     //Dictionary<int, float3[]> pointTriangles = new();
-    ComputeBuffer MapBuffer;
+    //ComputeBuffer MapBuffer;
 
     // Kernel IDs
     const int externalForcesKernel = 0;
@@ -108,13 +109,18 @@ public class Simulation3D : MonoBehaviour
         // Create Tested Object buffers
         int numPoints = testedObject.vertices.Length;
         int numTriangles = testedObject.triangles.Length;
+        //if (numPoints == 0)
+        //{
+        //    numPoints = testedObject.combinedVertices.Length;
+        //    numTriangles = testedObject.comobinedTriangles.Length;
+        //}
         //int numPoints = 515;
         //int numTriangles = 2304;
         PointsBuffer = ComputeHelper.CreateStructuredBuffer<float3>(numPoints);
         TrianglesBuffer = ComputeHelper.CreateStructuredBuffer<uint>(numTriangles);
-        pointsIndices = ComputeHelper.CreateStructuredBuffer<uint3>(numPoints);
-        pointsOffsets = ComputeHelper.CreateStructuredBuffer<uint>(numPoints);
-        MapBuffer = ComputeHelper.CreateStructuredBuffer<float3>(numPoints * numTriangles);
+        //pointsIndices = ComputeHelper.CreateStructuredBuffer<uint3>(numPoints);
+        //pointsOffsets = ComputeHelper.CreateStructuredBuffer<uint>(numPoints);
+        //MapBuffer = ComputeHelper.CreateStructuredBuffer<float3>(numPoints * numTriangles);
 
         // Set buffer data
         SetInitialBufferData(spawnData);
@@ -131,12 +137,12 @@ public class Simulation3D : MonoBehaviour
         ComputeHelper.SetBuffer(compute, VelocityBuffer, "Velocities", externalForcesKernel, pressureKernel, viscosityKernel, updatePositionsKernel);
 
         // Init Tested Object
-        ComputeHelper.SetBuffer(compute, PointsBuffer, "Points" , updatePointsHashKernel , updatePositionsKernel, spatialHashKernel); // updatePointsHashKernel
+        ComputeHelper.SetBuffer(compute, PointsBuffer, "Points", updatePointsHashKernel, updatePositionsKernel, spatialHashKernel); // updatePointsHashKernel
         ComputeHelper.SetBuffer(compute, TrianglesBuffer, "Triangles", updatePositionsKernel);
-        ComputeHelper.SetBuffer(compute, pointsIndices, "PointsIndices", updatePointsHashKernel, spatialHashKernel);
-        ComputeHelper.SetBuffer(compute, pointsOffsets, "PointsOffsets", updatePointsHashKernel, spatialHashKernel);
+        //ComputeHelper.SetBuffer(compute, pointsIndices, "PointsIndices", updatePointsHashKernel, spatialHashKernel);
+        //ComputeHelper.SetBuffer(compute, pointsOffsets, "PointsOffsets", updatePointsHashKernel, spatialHashKernel);
 
-        ComputeHelper.SetBuffer(compute, MapBuffer, "Map");
+        //ComputeHelper.SetBuffer(compute, MapBuffer, "Map");
 
 
         compute.SetInt("numParticles", PositionBuffer.count);
@@ -149,9 +155,9 @@ public class Simulation3D : MonoBehaviour
         gpuSort.SetBuffers(spatialIndices, spatialOffsets);
 
         // Tessted Object 
-        gpuSort.SetPointsBuffers(pointsIndices, pointsOffsets);
+        //gpuSort.SetPointsBuffers(pointsIndices, pointsOffsets);
 
-        MakeDictionary(testedObject);
+        //MakeDictionary(testedObject);
         // Init display
         display.Init(this);
     }
@@ -213,28 +219,41 @@ public class Simulation3D : MonoBehaviour
 
     void RunSimulationStep()
     {
+        //float3[] floatPositions = new float3[deformableObjects.Positions.Length];
+
+        //for (int i = 0; i < floatPositions.Length; i++)
+        //{
+        //    floatPositions[i] = transform.TransformPoint(deformableObjects.Positions[i]);
+        //}
+
+        //for (int i = 0; i < floatPositions.Length; i++)
+        //{
+        //    floatPositions[i] = deformableObjects.Positions[i];
+        //}
+
+        //PointsBuffer.SetData(floatPositions);
+
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: externalForcesKernel);
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: spatialHashKernel);
         gpuSort.SortAndCalculateOffsets();
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: densityKernel);
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: pressureKernel);
-        ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: viscosityKernel);
         ComputeHelper.Dispatch(compute, PositionBuffer.count, kernelIndex: updatePositionsKernel);
 
-        uint[] Triangles = new uint[TrianglesBuffer.count];
-        TrianglesBuffer.GetData(Triangles);
+        //uint[] Triangles = new uint[TrianglesBuffer.count];
+        //TrianglesBuffer.GetData(Triangles);
 
-        float3[] Points = new float3[PointsBuffer.count];
-        PointsBuffer.GetData(Points);
+        //float3[] Points = new float3[PointsBuffer.count];
+        //PointsBuffer.GetData(Points);
 
         //string json = JsonUtility.ToJson(Points);
         //Console.WriteLine(json);
 
-        uint3[] PointsIndices = new uint3[pointsIndices.count];
-        pointsIndices.GetData(PointsIndices);
+        //uint3[] PointsIndices = new uint3[pointsIndices.count];
+        //pointsIndices.GetData(PointsIndices);
 
-        uint[] PointsOffsets = new uint[pointsOffsets.count];
-        pointsOffsets.GetData(PointsOffsets);
+        //uint[] PointsOffsets = new uint[pointsOffsets.count];
+        //pointsOffsets.GetData(PointsOffsets);
 
         //for (int i = 0; i < Points.Length; i++)
         //{
@@ -321,10 +340,10 @@ public class Simulation3D : MonoBehaviour
             spatialIndices,
             spatialOffsets,
             PointsBuffer,
-            TrianglesBuffer,
-            pointsIndices,
-            pointsOffsets,
-            MapBuffer
+            TrianglesBuffer
+            //pointsIndices,
+            //pointsOffsets
+            //MapBuffer
         );
     }
 
@@ -383,7 +402,7 @@ public class Simulation3D : MonoBehaviour
         //            Console.WriteLine("YAAAAAAAAAAAAAAAAAAAAAAAAA");
         //    }
         //}
-        
+
         int[] allTriagnles = new int[testedObject.triangles.Length];
         Array.Copy(testedObject.triangles, allTriagnles, testedObject.triangles.Length);
 
@@ -393,7 +412,7 @@ public class Simulation3D : MonoBehaviour
         int numTriangles = testedObject.triangles.Length;
 
         float3[,] map = new float3[numPoints, numTriangles];
-        
+
         for (int i = 0; i < allPoints.Length; i++)
         {
             int counter = 0;
@@ -422,11 +441,11 @@ public class Simulation3D : MonoBehaviour
                     }
                 }
             }
-            
+
             if (!pointsTrianglesMap.ContainsKey(allPoints[i]))
             {
                 pointsTrianglesMap.Add(allPoints[i], myTriangles);
-                
+
                 map[i, 0] = allPoints[i];
 
                 for (int j = 1; j < myTriangles.Length; j++)
@@ -436,7 +455,7 @@ public class Simulation3D : MonoBehaviour
             }
         }
 
-        SetMap(map);
+        //SetMap(map);
 
         //for (int i = 0; i < numPoints; i++)
         //{
@@ -487,7 +506,7 @@ public class Simulation3D : MonoBehaviour
     {
         var oneDimensionalMap = MakeOneDimensionalArray(map);
 
-        MapBuffer.SetData(oneDimensionalMap);
+        //MapBuffer.SetData(oneDimensionalMap);
     }
 
     //public void GetAndSetShaderData()

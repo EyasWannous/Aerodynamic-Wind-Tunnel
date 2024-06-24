@@ -3,7 +3,12 @@ guid: 3ffbc4c8823bffe42ad467aeca79a3c7
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: 5 bladed Propeller_chromium plate_229_229_229
+    second: {fileID: 2100000, guid: 853e9bd6573f9974193e2f4b807d1e3e, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
