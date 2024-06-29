@@ -1,4 +1,4 @@
-#pragma kernel CSMain
+#pragma kernel Deforme
 
 // Constants
 #define THREADS_PER_GROUP 256
@@ -217,7 +217,7 @@ void ShapeMatching(float3 centerOfMass)
 
 // Kernels
 [numthreads(THREADS_PER_GROUP, 1, 1)]
-void CSMain(uint3 id : SV_DispatchThreadID)
+void Deforme(uint3 id : SV_DispatchThreadID)
 {
     int index = id.x;
 

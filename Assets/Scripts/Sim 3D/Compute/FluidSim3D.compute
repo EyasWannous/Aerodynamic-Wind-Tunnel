@@ -6,7 +6,7 @@
 
 #pragma kernel UpdatePositions
 
-#pragma kernel UpdatePointsHash
+//#pragma kernel UpdatePointsHash
 
 // Debug
 // #pragma enable_d3d11_debug_symbols 
@@ -195,6 +195,7 @@ void CollisionPointTriangles(uint particleIndex)
             //velocityLocal.z *= 0;
             
             Velocities[particleIndex] = mul(localToWorld, float4(velocityLocal, 0)).xyz;
+            break;
         }
     }
 }

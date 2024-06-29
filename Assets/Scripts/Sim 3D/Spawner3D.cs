@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -20,6 +21,27 @@ public class Spawner3D : MonoBehaviour
         float3[] velocities = new float3[numPoints];
 
         int i = 0;
+
+        //for (int x = 0; x < numParticlesPerAxis; x++)
+        //{
+        //    for (int y = 0; y < numParticlesPerAxis; y++)
+        //    {
+        //        Parallel.For(0, numParticlesPerAxis, (int z) =>
+        //        {
+        //            float tx = x / (numParticlesPerAxis - 1f);
+        //            float ty = y / (numParticlesPerAxis - 1f);
+        //            float tz = z / (numParticlesPerAxis - 1f);
+
+        //            float px = (tx - 0.5f) * size + centre.x;
+        //            float py = (ty - 0.5f) * size + centre.y;
+        //            float pz = (tz - 0.5f) * size + centre.z;
+        //            float3 jitter = UnityEngine.Random.insideUnitSphere * jitterStrength;
+        //            points[i] = new float3(px, py, pz) + jitter;
+        //            velocities[i] = initialVel;
+        //            i++;
+        //        });
+        //    }
+        //}
 
         for (int x = 0; x < numParticlesPerAxis; x++)
         {

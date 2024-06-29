@@ -38,8 +38,11 @@ public class Simulation3D : MonoBehaviour
     public ParticleDisplay3D display;
     public Transform floorDisplay;
     // OBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+    //public DeformableObjects deformableObjects;
     public TestedObject testedObject;
-    public DeformableObjects deformableObjects;
+    public TriangulationScript triangulationScript;
+    public Triangulation triangulation;
+    public MeshCollector meshCollector;
 
     // Buffers
     public ComputeBuffer PositionBuffer { get; private set; }
@@ -66,7 +69,7 @@ public class Simulation3D : MonoBehaviour
     const int updatePositionsKernel = 5;
 
     //Tested Object kernel IDs
-    const int updatePointsHashKernel = 6;
+    //const int updatePointsHashKernel = 6;
 
     GPUSort gpuSort;
 
@@ -87,7 +90,6 @@ public class Simulation3D : MonoBehaviour
 
     void Start()
     {
-        testedObject.InitializeMesh();
 
         Debug.Log("Controls: Space = Play/Pause, R = Reset");
         Debug.Log("Use transform tool in scene to scale/rotate simulation bounding box.");
@@ -107,13 +109,31 @@ public class Simulation3D : MonoBehaviour
         spatialOffsets = ComputeHelper.CreateStructuredBuffer<uint>(numParticles);
 
         // Create Tested Object buffers
-        int numPoints = testedObject.vertices.Length;
-        int numTriangles = testedObject.triangles.Length;
-        //if (numPoints == 0)
-        //{
-        //    numPoints = testedObject.combinedVertices.Length;
-        //    numTriangles = testedObject.comobinedTriangles.Length;
-        //}
+        int numPoints;
+        int numTriangles;
+        if(meshCollector != null && meshCollector.mesh != null) 
+        {
+            numPoints = meshCollector.mesh.vertices.Length;
+            numTriangles = meshCollector.mesh.triangles.Length;
+        }
+        else if (triangulation != null)
+        {
+            triangulation.Init();
+            numPoints = triangulation.vertices.Length;
+            numTriangles = triangulation.triangles.Length;
+        }
+        else if(triangulationScript != null)
+        {
+            triangulationScript.Init();
+            numPoints = triangulationScript.vertices.Length;
+            numTriangles = triangulationScript.triangles.Length;
+        }
+        else
+        {
+            testedObject.InitializeMesh();
+            numPoints = testedObject.vertices.Length;
+            numTriangles = testedObject.triangles.Length;
+        }
         //int numPoints = 515;
         //int numTriangles = 2304;
         PointsBuffer = ComputeHelper.CreateStructuredBuffer<float3>(numPoints);
@@ -126,7 +146,7 @@ public class Simulation3D : MonoBehaviour
         SetInitialBufferData(spawnData);
 
         // Set Tested Object buffer data
-        SetPointsTriangles(testedObject);
+        SetPointsTriangles(triangulationScript, triangulation);
 
         // Init compute
         ComputeHelper.SetBuffer(compute, PositionBuffer, "Positions", externalForcesKernel, updatePositionsKernel);
@@ -137,7 +157,7 @@ public class Simulation3D : MonoBehaviour
         ComputeHelper.SetBuffer(compute, VelocityBuffer, "Velocities", externalForcesKernel, pressureKernel, viscosityKernel, updatePositionsKernel);
 
         // Init Tested Object
-        ComputeHelper.SetBuffer(compute, PointsBuffer, "Points", updatePointsHashKernel, updatePositionsKernel, spatialHashKernel); // updatePointsHashKernel
+        ComputeHelper.SetBuffer(compute, PointsBuffer, "Points", updatePositionsKernel, spatialHashKernel); // updatePointsHashKernel
         ComputeHelper.SetBuffer(compute, TrianglesBuffer, "Triangles", updatePositionsKernel);
         //ComputeHelper.SetBuffer(compute, pointsIndices, "PointsIndices", updatePointsHashKernel, spatialHashKernel);
         //ComputeHelper.SetBuffer(compute, pointsOffsets, "PointsOffsets", updatePointsHashKernel, spatialHashKernel);
@@ -341,9 +361,9 @@ public class Simulation3D : MonoBehaviour
             spatialOffsets,
             PointsBuffer,
             TrianglesBuffer
-            //pointsIndices,
-            //pointsOffsets
-            //MapBuffer
+        //pointsIndices,
+        //pointsOffsets
+        //MapBuffer
         );
     }
 
@@ -358,20 +378,54 @@ public class Simulation3D : MonoBehaviour
 
     }
 
-    void SetPointsTriangles(TestedObject testedObject)
+    void SetPointsTriangles(TriangulationScript triangulationScript, Triangulation triangulation)
     {
-        float3[] allPoints = new float3[testedObject.vertices.Length];
-        //Array.Copy(testedObject.vertices, allPoints, testedObject.vertices.Length);
-        for (int i = 0; i < testedObject.vertices.Length; i++)
+        int numPoints;
+        int numTriangles;
+        Vector3[] vertices;
+        int[] triangles;
+
+        if (meshCollector != null && meshCollector.mesh != null)
         {
-            allPoints[i].x = testedObject.vertices[i].x;
-            allPoints[i].y = testedObject.vertices[i].y;
-            allPoints[i].z = testedObject.vertices[i].z;
+            numPoints = meshCollector.mesh.vertices.Length;
+            numTriangles = meshCollector.mesh.triangles.Length;
+            vertices = meshCollector.mesh.vertices;
+            triangles = meshCollector.mesh.triangles;
+        }
+        else if (triangulation != null)
+        {
+            numPoints = triangulation.vertices.Length;
+            numTriangles = triangulation.triangles.Length;
+            vertices = triangulation.vertices;
+            triangles = triangulation.triangles;
+        }
+        else if(triangulationScript != null)
+        {
+            numPoints = triangulationScript.vertices.Length;
+            numTriangles = triangulationScript.triangles.Length;
+            vertices = triangulationScript.vertices;
+            triangles = triangulationScript.triangles;
+        }
+        else
+        {
+            numPoints = testedObject.vertices.Length;
+            numTriangles = testedObject.triangles.Length;
+            vertices = testedObject.vertices;
+            triangles = testedObject.triangles;
+        }
+
+        float3[] allPoints = new float3[numPoints];
+        //Array.Copy(testedObject.vertices, allPoints, testedObject.vertices.Length);
+        for (int i = 0; i < numPoints; i++)
+        {
+            allPoints[i].x = vertices[i].x;
+            allPoints[i].y = vertices[i].y;
+            allPoints[i].z = vertices[i].z;
         }
 
 
-        int[] allTriagnles = new int[testedObject.triangles.Length];
-        Array.Copy(testedObject.triangles, allTriagnles, testedObject.triangles.Length);
+        int[] allTriagnles = new int[numTriangles];
+        Array.Copy(triangles, allTriagnles, triangles.Length);
 
         PointsBuffer.SetData(allPoints);
         TrianglesBuffer.SetData(allTriagnles);

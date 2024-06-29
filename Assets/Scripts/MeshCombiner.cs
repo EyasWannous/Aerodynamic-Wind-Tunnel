@@ -28,6 +28,12 @@ public class MeshCombiner : MonoBehaviour
         // Combine meshes
         for (int i = 0; i < meshFilters.Length; i++)
         {
+            if (meshFilters[i].sharedMesh == null)
+            {
+                Debug.LogError($"Mesh instance {i} is null. Skipping this mesh.");
+                continue;
+            }
+
             combine[i].mesh = meshFilters[i].sharedMesh;
             combine[i].transform = meshFilters[i].transform.localToWorldMatrix;
             meshFilters[i].gameObject.SetActive(false); // Disable the individual mesh
@@ -36,7 +42,7 @@ public class MeshCombiner : MonoBehaviour
         // Create a new MeshFilter and MeshRenderer for the combined mesh
         MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
         meshFilter.mesh = new Mesh();
-        meshFilter.mesh.CombineMeshes(combine);
+        meshFilter.mesh.CombineMeshes(combine, true, true);
 
         // Add a MeshRenderer to render the combined mesh
         MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();

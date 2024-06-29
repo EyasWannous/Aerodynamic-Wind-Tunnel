@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Test C (3D) Plane Wing.unity
+    guid: 306ffd60697ca7b47a7b3c54242daeda
   m_configObjects: {}

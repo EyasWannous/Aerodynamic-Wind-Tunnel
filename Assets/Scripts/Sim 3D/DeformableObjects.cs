@@ -1,9 +1,9 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class DeformableObjects : MonoBehaviour
 {
-    public Vector3 windForce;
+    public Vector3 windForce = new(0, 0, 0);
     public float alpha = 0.5f;
     public float timeStep = 0.02f;
     public List<float[]> pointMassesList;  // List of masses arrays for each mesh filter
@@ -113,7 +113,7 @@ public class DeformableObjects : MonoBehaviour
                 return;
             }
 
-            int kernelHandle = computeShader.FindKernel("CSMain");
+            int kernelHandle = computeShader.FindKernel("Deforme");
 
             for (int i = 0; i < positionsList.Count; i++)
             {
@@ -155,7 +155,7 @@ public class DeformableObjects : MonoBehaviour
         windForceBuffer?.Release();
     }
 
-    Vector3 ComputeCenterOfMass(Vector3[] points, float[] masses)
+    private Vector3 ComputeCenterOfMass(Vector3[] points, float[] masses)
     {
         Vector3 centerOfMass = Vector3.zero;
         float totalMass = 0f;
